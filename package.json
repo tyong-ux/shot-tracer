@@ -1,0 +1,24 @@
+{
+  "name": "shot-tracer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "골프 샷 트레이서: 실시간 촬영/영상 업로드 → 궤적·볼스피드·비거리",
+  "scripts": {
+    "serve": "npx http-server www -p 8080 -c-1",
+    "test": "node test/node_test.js 0.6667",
+    "android:init": "npx cap add android && node scripts/patch-native.js && npx cap sync android",
+    "android:open": "npx cap open android",
+    "ios:init": "npx cap add ios && node scripts/patch-native.js && npx cap sync ios",
+    "sync": "npx cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/filesystem": "^6.0.1",
+    "@capacitor/ios": "^6.1.2",
+    "@capacitor/share": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

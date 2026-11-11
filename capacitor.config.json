@@ -1,0 +1,7 @@
+{
+  "appId": "com.shottracer.app",
+  "appName": "샷 트레이서",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "always" }
+}

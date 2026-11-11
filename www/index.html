@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1f4b">
+<title>샷 트레이서</title>
+<style>
+  :root { --navy:#0b1f4b; --teal:#00c2b8; --bg:#06101f; --card:#0f2147; --txt:#eef3ff; --sub:#9fb0d6; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; overflow:hidden; }
+  #app { display:flex; flex-direction:column; height:100%; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+  header { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--navy); }
+  .tab { flex:1; padding:10px 0; border:0; border-radius:10px; background:transparent; color:var(--sub); font-size:15px; font-weight:700; }
+  .tab.on { background:var(--teal); color:#03201e; }
+  .icon { width:42px; height:40px; border:0; border-radius:10px; background:#1a2f60; color:var(--txt); font-size:20px; }
+  #stage { position:relative; flex:1; display:flex; align-items:center; justify-content:center; background:#000; overflow:hidden; touch-action:manipulation; }
+  #view { max-width:100%; max-height:100%; background:#000; }
+  #status { position:absolute; left:50%; top:10px; transform:translateX(-50%); padding:7px 14px; border-radius:20px; background:rgba(11,31,75,.88); font-size:14px; font-weight:600; white-space:nowrap; pointer-events:none; }
+  #status.warn { background:rgba(170,60,30,.92); }
+  #status.ok { background:rgba(0,150,140,.92); }
+  #empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:var(--sub); text-align:center; padding:24px; font-size:15px; line-height:1.5; }
+  footer { display:flex; gap:8px; padding:10px; background:var(--navy); flex-wrap:wrap; }
+  .btn { flex:1; min-width:90px; padding:13px 6px; border:0; border-radius:12px; background:#1a2f60; color:var(--txt); font-size:15px; font-weight:700; }
+  .btn.main { background:var(--teal); color:#03201e; }
+  .btn.rec { background:#d33a3a; color:#fff; }
+  .btn:disabled { opacity:.4; }
+  #scrub { width:100%; accent-color:var(--teal); }
+  #scrubRow { display:none; width:100%; align-items:center; gap:8px; font-size:12px; color:var(--sub); }
+  .sheet { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; z-index:10; }
+  .sheet .panel { position:absolute; left:0; right:0; bottom:0; max-height:86%; overflow:auto; background:#0c1a3a; border-radius:18px 18px 0 0; padding:16px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .panel h3 { margin:4px 0 12px; font-size:17px; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid #1d2f5a; }
+  .row label { font-size:14px; }
+  .row small { display:block; color:var(--sub); font-size:11.5px; margin-top:2px; }
+  .row input, .row select { width:130px; padding:8px; border-radius:8px; border:1px solid #2a4180; background:#132a5a; color:var(--txt); font-size:15px; text-align:right; }
+  .seg { display:flex; gap:4px; } .seg button { padding:7px 10px; border-radius:8px; border:1px solid #2a4180; background:#132a5a; color:var(--sub); font-weight:700; }
+  .seg button.on { background:var(--teal); color:#03201e; border-color:var(--teal); }
+  #results .shot { background:var(--card); border-radius:12px; padding:12px; margin-bottom:10px; }
+  .shot .big { font-size:24px; font-weight:800; } .shot .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:8px; font-size:13px; }
+  .shot .grid div span { display:block; color:var(--sub); font-size:11px; }
+  .shot .note { color:var(--sub); font-size:11.5px; margin-top:8px; line-height:1.45; }
+  .shot .redo { display:flex; gap:6px; margin-top:8px; } .shot .redo input, .shot .redo select { flex:1; min-width:0; padding:7px; border-radius:8px; border:1px solid #2a4180; background:#132a5a; color:var(--txt); }
+  .help { color:var(--sub); font-size:12.5px; line-height:1.55; margin-top:12px; }
+  #busy { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:20; font-size:16px; font-weight:700; flex-direction:column; gap:12px; }
+  #busyBar { width:60%; height:8px; background:#1a2f60; border-radius:4px; overflow:hidden; } #busyBar div { height:100%; width:0; background:var(--teal); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button class="tab on" id="tabLive">실시간 촬영</button>
+    <button class="tab" id="tabUp">영상 업로드</button>
+    <button class="icon" id="btnRes" title="결과">📋</button>
+    <button class="icon" id="btnSet" title="설정">⚙︎</button>
+  </header>
+  <div id="stage">
+    <canvas id="view" width="1080" height="1920"></canvas>
+    <div id="empty"></div>
+    <div id="status" style="display:none"></div>
+  </div>
+  <footer id="foot"></footer>
+</div>
+
+<div class="sheet" id="setSheet"><div class="panel">
+  <h3>설정 · 정확도 높이기 <small style="color:var(--sub);font-weight:400">(모두 선택 사항)</small></h3>
+  <div class="row"><label>볼스피드 단위</label><div class="seg" id="unitSeg"><button data-v="mph">MPH</button><button data-v="ms">m/s</button><button data-v="kmh">km/h</button></div></div>
+  <div class="row"><label>클럽<small>입력하면 발사각·속도 범위를 더 잘 잡아요</small></label><select id="club"><option value="">모름</option><option>Driver</option><option>3W</option><option>5i</option><option>7i</option><option>9i</option><option>PW</option><option>SW</option></select></div>
+  <div class="row"><label>키 (cm)<small>피니시 때 키로 거리 보정</small></label><input id="height" type="number" inputmode="decimal" placeholder="예: 175"></div>
+  <div class="row"><label>공까지 촬영 거리 (m)<small>폰에서 공까지 바닥 거리</small></label><input id="dist" type="number" inputmode="decimal" placeholder="예: 3"></div>
+  <div class="row"><label>구질<small>모르면 자동(영상에서 추정)</small></label><select id="shape"><option value="auto">자동</option><option value="draw">드로우</option><option value="fade">페이드</option><option value="straight">스트레이트</option></select></div>
+  <div class="row"><label>카메라 화각 (mm)<small>폰 기본 카메라 1배 ≈ 24~26mm</small></label><input id="fmm" type="number" inputmode="decimal" placeholder="26"></div>
+  <div class="row"><label>카메라 기울기 (°)<small>업로드 영상용. 비우면 영상에서 추정, 실시간은 센서로 자동. 아래로 숙이면 −</small></label><input id="pitch" type="number" inputmode="decimal" placeholder="자동"></div>
+  <div class="row"><label>슬로모션 배속<small>재생 속도로 늘려 저장된 슬로모 영상이면 배속 입력(예: 8)</small></label><input id="slow" type="number" inputmode="decimal" placeholder="1"></div>
+  <div class="row"><label>분석 해상도</label><div class="seg" id="resSeg"><button data-v="720">빠름 720</button><button data-v="1080">정밀 1080</button></div></div>
+  <p class="help">• 아무것도 입력하지 않아도 공 크기(42.67mm)로 거리를 계산해요. 입력할수록 오차가 줄어요.<br>
+  • 촬영 팁: 공 <b>뒤 2.5~4m</b>, 타깃 방향을 향해 세로로, 가능하면 <b>60fps 이상</b>. 공이 화면 아래쪽 1/3에 오게.<br>
+  • 실제 비거리를 알면 결과 카드에서 샷마다 입력해 다시 계산할 수 있어요.</p>
+  <button class="btn main" id="setClose" style="width:100%;margin-top:8px">닫기</button>
+</div></div>
+
+<div class="sheet" id="resSheet"><div class="panel"><h3>샷 결과</h3><div id="results"></div>
+  <button class="btn main" id="resClose" style="width:100%">닫기</button></div></div>
+
+<div id="busy"><div id="busyTxt">분석 중…</div><div id="busyBar"><div></div></div></div>
+
+<input type="file" id="file" accept="video/*" style="display:none">
+<script src="tracer-core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

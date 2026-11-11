@@ -1,0 +1,17 @@
+# GitHub에 올리면 자동으로 안드로이드 APK를 만들어 줌 (Actions 탭 → 최신 실행 → Artifacts에서 다운로드)
+name: Build Android APK
+on: [push, workflow_dispatch]
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - run: npm install
+      - run: npx cap add android && node scripts/patch-native.js && npx cap sync android
+      - run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with: { name: shot-tracer-debug-apk, path: android/app/build/outputs/apk/debug/app-debug.apk }
