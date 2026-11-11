@@ -395,3 +395,8 @@ bindSettings();
 // 첫 화면: 카메라 버튼(브라우저는 사용자 동작 후 카메라 허용)
 empty('🎥 <b>실시간 촬영</b><br>공 뒤 2.5~4m에서 세로로 비추고<br>화면의 공을 탭하면 칠 때마다 궤적이 나와요');
 footLive(false); $('foot').prepend(mk('btn main', '카메라 시작', startLive));
+
+// 웹/PC에서 '앱 설치'(홈 화면·바탕화면 아이콘)와 오프라인 사용 지원. 네이티브 앱 안에서는 끔
+if ('serviceWorker' in navigator && !(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
